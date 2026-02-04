@@ -1,11 +1,11 @@
 {
-    "name": "youtube_english_songs",
-    "short_name": "youtube_english_songs",
+    "name": "Youtube English Songs",
+    "short_name": "Youtube English Songs",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Aprende inglés con canciones de YouTube, subtítulos interactivos y glosario.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
