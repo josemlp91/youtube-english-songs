@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/theme.dart';
+import '../models/glossary_word.dart';
 import '../models/song.dart';
 import '../providers/glossary_provider.dart';
+import '../services/translation_service.dart';
 import 'word_popup.dart';
 
 class InteractiveSubtitles extends StatefulWidget {
@@ -24,10 +26,12 @@ class InteractiveSubtitles extends StatefulWidget {
 
 class _InteractiveSubtitlesState extends State<InteractiveSubtitles> {
   final TextEditingController _textController = TextEditingController();
+  final TranslationService _translationService = TranslationService();
   String _currentText = '';
   bool _isExpanded = true;
   bool _isSelectingPhrase = false;
   final Set<int> _selectedWordIndices = {};
+  final Set<String> _addingWords = {};
 
   @override
   void dispose() {
@@ -79,6 +83,54 @@ class _InteractiveSubtitlesState extends State<InteractiveSubtitles> {
     );
   }
 
+  Future<void> _addWordToGlossary(BuildContext context, String word) async {
+    final glossaryProvider = context.read<GlossaryProvider>();
+    final cleanWord = word.toLowerCase().trim();
+
+    if (cleanWord.isEmpty) return;
+    if (glossaryProvider.isWordInGlossary(cleanWord)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"$cleanWord" ya esta en el glosario')),
+      );
+      return;
+    }
+    if (_addingWords.contains(cleanWord)) return;
+
+    setState(() => _addingWords.add(cleanWord));
+
+    try {
+      final result = await _translationService.translate(cleanWord);
+      final glossaryWord = GlossaryWord(
+        word: cleanWord,
+        translation: result.translatedText,
+        entryType: EntryType.word,
+        songId: widget.currentSong?.id,
+        songTitle: widget.currentSong?.title,
+        timestamp: widget.currentPosition,
+      );
+      await glossaryProvider.addWord(glossaryWord);
+
+      if (!mounted) return;
+      if (glossaryProvider.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(glossaryProvider.error!)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${glossaryWord.word}" agregada al glosario'),
+            backgroundColor: AppTheme.successColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _addingWords.remove(cleanWord));
+      }
+    }
+  }
+
   void _toggleWordSelection(int index) {
     setState(() {
       if (_selectedWordIndices.contains(index)) {
@@ -99,7 +151,11 @@ class _InteractiveSubtitlesState extends State<InteractiveSubtitles> {
   void _confirmPhraseSelection(List<String> words) {
     final phrase = _getSelectedPhrase(words);
     if (phrase.isNotEmpty) {
-      _showWordPopup(context, phrase);
+      if (!phrase.contains(' ')) {
+        _addWordToGlossary(context, phrase);
+      } else {
+        _showWordPopup(context, phrase);
+      }
     }
     _clearSelection();
   }
@@ -275,11 +331,12 @@ class _InteractiveSubtitlesState extends State<InteractiveSubtitles> {
                                   isInGlossary: isInGlossary,
                                   isSelected: isSelected,
                                   isSelectingMode: _isSelectingPhrase,
+                                  isAdding: _addingWords.contains(word.toLowerCase()),
                                   onTap: () {
                                     if (_isSelectingPhrase) {
                                       _toggleWordSelection(index);
                                     } else {
-                                      _showWordPopup(context, word);
+                                      _addWordToGlossary(context, word);
                                     }
                                   },
                                   onLongPress: () {
@@ -399,6 +456,7 @@ class _WordChip extends StatelessWidget {
   final bool isInGlossary;
   final bool isSelected;
   final bool isSelectingMode;
+  final bool isAdding;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -407,6 +465,7 @@ class _WordChip extends StatelessWidget {
     required this.isInGlossary,
     this.isSelected = false,
     this.isSelectingMode = false,
+    this.isAdding = false,
     required this.onTap,
     required this.onLongPress,
   });
@@ -435,7 +494,7 @@ class _WordChip extends StatelessWidget {
       color: backgroundColor,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: onTap,
+        onTap: isAdding ? null : onTap,
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(8),
         child: Container(
@@ -459,6 +518,14 @@ class _WordChip extends StatelessWidget {
                   color: textColor,
                 ),
               ),
+              if (isAdding) ...[
+                const SizedBox(width: 6),
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ],
               if (isInGlossary && !isSelected) ...[
                 const SizedBox(width: 4),
                 const Icon(Icons.check_circle, size: 14, color: AppTheme.successColor),
