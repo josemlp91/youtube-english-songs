@@ -12,6 +12,7 @@ class WordPopup extends StatefulWidget {
   final Duration? timestamp;
   final bool isInGlossary;
   final Function(GlossaryWord) onAddToGlossary;
+  final VoidCallback? onBeforeSpeak;
 
   const WordPopup({
     super.key,
@@ -21,6 +22,7 @@ class WordPopup extends StatefulWidget {
     this.timestamp,
     required this.isInGlossary,
     required this.onAddToGlossary,
+    this.onBeforeSpeak,
   });
 
   @override
@@ -84,6 +86,7 @@ class _WordPopupState extends State<WordPopup> {
 
   Future<void> _playPronunciation() async {
     setState(() => _isPlaying = true);
+    widget.onBeforeSpeak?.call();
     await _ttsService.speak(widget.word);
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
@@ -93,6 +96,7 @@ class _WordPopupState extends State<WordPopup> {
 
   Future<void> _playSlowPronunciation() async {
     setState(() => _isPlaying = true);
+    widget.onBeforeSpeak?.call();
     await _ttsService.speakSlowly(widget.word);
     await Future.delayed(const Duration(milliseconds: 1000));
     if (mounted) {

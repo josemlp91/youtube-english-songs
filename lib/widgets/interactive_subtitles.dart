@@ -9,11 +9,13 @@ import 'word_popup.dart';
 class InteractiveSubtitles extends StatefulWidget {
   final Song? currentSong;
   final Duration currentPosition;
+  final VoidCallback? onBeforeSpeak;
 
   const InteractiveSubtitles({
     super.key,
     this.currentSong,
     required this.currentPosition,
+    this.onBeforeSpeak,
   });
 
   @override
@@ -62,6 +64,7 @@ class _InteractiveSubtitlesState extends State<InteractiveSubtitles> {
         songTitle: widget.currentSong?.title,
         timestamp: widget.currentPosition,
         isInGlossary: glossaryProvider.isWordInGlossary(cleanWord),
+        onBeforeSpeak: widget.onBeforeSpeak,
         onAddToGlossary: (glossaryWord) {
           glossaryProvider.addWord(glossaryWord);
           ScaffoldMessenger.of(context).showSnackBar(

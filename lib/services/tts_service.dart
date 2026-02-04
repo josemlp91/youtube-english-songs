@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_tts/flutter_tts.dart';
 
 class TtsService {
@@ -6,6 +8,8 @@ class TtsService {
   TtsService._internal();
 
   final FlutterTts _flutterTts = FlutterTts();
+  static final StreamController<void> _beforeSpeakController =
+      StreamController<void>.broadcast();
   bool _isInitialized = false;
   bool _voiceLocked = false;
   bool _isWarmedUp = false;
@@ -21,6 +25,7 @@ class TtsService {
   double get pitch => _pitch;
   double get volume => _volume;
   String get language => _language;
+  Stream<void> get beforeSpeakStream => _beforeSpeakController.stream;
 
   /// Inicializa el servicio TTS
   Future<void> init() async {
@@ -51,6 +56,7 @@ class TtsService {
     if (!_isWarmedUp) {
       await _warmUpEngine();
     }
+    _beforeSpeakController.add(null);
     await _flutterTts.speak(text);
   }
 

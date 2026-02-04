@@ -10,6 +10,7 @@ import '../models/song.dart';
 import '../providers/player_provider.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/interactive_subtitles.dart';
+import '../services/tts_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -22,6 +23,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   YoutubePlayerController? _controller;
   String? _currentVideoId;
   bool _isReady = false;
+  StreamSubscription<void>? _ttsSubscription;
 
   // Loop A-B
   double? _loopStartSeconds;
@@ -33,7 +35,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void dispose() {
     _controller?.close();
     _loopCheckTimer?.cancel();
+    _ttsSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ttsSubscription = TtsService().beforeSpeakStream.listen((_) {
+      _pauseVideoIfPlaying();
+    });
   }
 
   void _initController(String videoId) {
@@ -173,6 +184,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  void _pauseVideoIfPlaying() async {
+    final state = await _controller?.playerState;
+    if (state == PlayerState.playing) {
+      _controller?.pauseVideo();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -241,6 +259,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 InteractiveSubtitles(
                   currentSong: song,
                   currentPosition: playerProvider.currentPosition,
+                  onBeforeSpeak: _pauseVideoIfPlaying,
                 ),
                 SizedBox(height: 16 + MediaQuery.of(context).padding.bottom),
               ],
@@ -306,6 +325,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   InteractiveSubtitles(
                     currentSong: song,
                     currentPosition: playerProvider.currentPosition,
+                    onBeforeSpeak: _pauseVideoIfPlaying,
                   ),
                 ],
               ),
