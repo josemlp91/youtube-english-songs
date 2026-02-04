@@ -1,6 +1,6 @@
 class AppConstants {
   // App info
-  static const String appName = 'YouTube English Songs';
+  static const String appName = 'Youtube English Songs';
   static const String appVersion = '1.0.0';
 
   // Hive box names
